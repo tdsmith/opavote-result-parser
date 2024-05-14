@@ -1,0 +1,6 @@
+attrs
+beautifulsoup4
+pandas
+pip-tools
+pytest
+typer

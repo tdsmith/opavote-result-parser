@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opavote_result_parser"
+dependencies = ["attrs", "beautifulsoup4", "pandas", "typer"]
+requires-python = ">= 3.8"
+version = "2024.05.01"
+scripts = { "opaparse" = "opavote_result_parser.cli:entrypoint" }
