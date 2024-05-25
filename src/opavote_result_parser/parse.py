@@ -61,13 +61,21 @@ def parse(path_or_file: IO[str] | PathLike | str) -> list[Ballot]:
         if m := WEIGHT_RE.search(text):
             found["weight"] = int(m[1])
         ranks = {}
-        candidates = page.css.select(".candidate:has(.rank)")
+        candidates = page.css.select(
+            ".candidate:has(.rank), .candidate:has(.box:-soup-contains(☑))"
+        )
         for candidate in candidates:
-            rank = candidate.find(class_="rank").string
-            if not rank:
+            rank = candidate.find(class_="rank")
+            if rank:
+                if not rank.string:
+                    continue
+                candidate = list(candidate.stripped_strings)[-1]
+                ranks[candidate] = int(rank.string)
                 continue
+
+            # Checkbox election
             candidate = list(candidate.stripped_strings)[-1]
-            ranks[candidate] = int(rank)
+            ranks[candidate] = "X"
 
         counter_div = page.find(class_="counter")
         m = COUNTER_RE.match(counter_div.string)
