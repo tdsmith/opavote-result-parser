@@ -1,7 +1,7 @@
 import re
 from collections.abc import Mapping
 from os import PathLike
-from typing import IO
+from typing import IO, Literal
 
 import attr
 from bs4 import BeautifulSoup
@@ -14,7 +14,7 @@ class Ballot:
     weight: int | None = None
     # Mapping of candidate name -> integer rank
     # Unranked candidates are absent
-    ranks: Mapping[str, int]
+    ranks: Mapping[str, int | Literal["X"]]
 
 
 VOTER_RE = re.compile(r"Voter: ([A-Z]+)")
@@ -60,22 +60,23 @@ def parse(path_or_file: IO[str] | PathLike | str) -> list[Ballot]:
             found["token"] = m[1]
         if m := WEIGHT_RE.search(text):
             found["weight"] = int(m[1])
-        ranks = {}
-        candidates = page.css.select(
-            ".candidate:has(.rank), .candidate:has(.box:-soup-contains(☑))"
-        )
-        for candidate in candidates:
-            rank = candidate.find(class_="rank")
-            if rank:
-                if not rank.string:
-                    continue
-                candidate = list(candidate.stripped_strings)[-1]
-                ranks[candidate] = int(rank.string)
-                continue
 
-            # Checkbox election
-            candidate = list(candidate.stripped_strings)[-1]
-            ranks[candidate] = "X"
+        ranks: dict[str, int | Literal["X"]] = {}
+
+        # Ranked election
+        rank_candidates = page.css.select(".candidate:has(.rank)")
+        for candidate in rank_candidates:
+            rank = candidate.find(class_="rank", string=True)
+            if not rank:
+                continue
+            candidate_name: str = list(candidate.stripped_strings)[-1]
+            ranks[candidate_name] = int(rank.string)
+
+        # Checkbox election
+        box_candidates = page.css.select(".candidate:has(.box:-soup-contains(☑))")
+        for candidate in box_candidates:
+            candidate_name: str = list(candidate.stripped_strings)[-1]
+            ranks[candidate_name] = "X"
 
         counter_div = page.find(class_="counter")
         m = COUNTER_RE.match(counter_div.string)
